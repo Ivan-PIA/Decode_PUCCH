@@ -4,6 +4,9 @@
 
 // brute force - (softbit)
 
+
+
+
 void decode_PUCCH_LLR(const std::vector<double>& received, std::vector<int8_t> &decoded, int rate, double disp) {
     std::vector<int8_t> best_d(rate);
     int max_score = -1;
@@ -38,6 +41,39 @@ void decode_PUCCH_LLR(const std::vector<double>& received, std::vector<int8_t> &
     decoded = best_d;
 }
 
+void decode_PUCCH_LLR2(const std::vector<double>& received, std::vector<int8_t> &decoded, int rate, double disp) {
+    std::vector<int8_t> best_d(rate);
+    int max_score = -1;
+
+    for (int i = 0; i < (1 << rate); i++) {
+        std::vector<int8_t> candidate_d(rate);
+        std::vector<int8_t> candidate_c(ROW);
+
+        for (int j = 0; j < rate; j++) {
+            candidate_d[j] = (i >> j) & 1;
+        }
+
+        encode_PUCCH(candidate_d, candidate_c);
+
+        int score = 0;
+        for (int j = 0; j < ROW; j++) {
+            // double llr = (2.0 * received[j]) / disp;
+
+            int8_t candidate_c_mod = (candidate_c[j] == 0) ? -1 : 1;
+            score +=  candidate_c_mod * received[j];
+            
+        }
+
+        if (score > max_score) {
+            max_score = score;
+            best_d = candidate_d;
+        }
+    }
+
+    decoded = best_d;
+}
+
+
 
 void decode_PUCCH_LLR_split(const std::vector<double>& received, std::vector<int8_t> &decoded, double disp) {
     std::vector<int8_t> best_d(RATE);
@@ -55,13 +91,8 @@ void decode_PUCCH_LLR_split(const std::vector<double>& received, std::vector<int
 
         int score = 0;
         for (int j = 0; j < ROW; j++) {
-            double llr = (2.0 * received[j]) / disp;
-
-            int8_t decoded_bit = (llr >= 0) ? 1 : 0;
-            
-            if (decoded_bit == candidate_c[j]) {
-                score++;
-            }
+            int8_t candidate_c_mod = (candidate_c[j] == 0) ? -1 : 1;
+            score +=  candidate_c_mod * received[j];
         }
 
         if (score > max_score) {
